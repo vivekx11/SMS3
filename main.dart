@@ -1,4 +1,3 @@
-// main.dart - Mobile Repair Shop Manager (Beautiful UI + Swipe to Delete + Delete Option)
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -12,9 +11,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:telephony/telephony.dart';
-import 'package:intl/intl.dart'; // For nice date formatting
+import 'package:intl/intl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,13 +30,25 @@ class MyRepairShopApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseTheme = ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      useMaterial3: true,
+      fontFamily: 'Roboto',
+    );
+
     return MaterialApp(
       title: 'Mobile Repair Shop Manager',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
+      theme: baseTheme.copyWith(
+        scaffoldBackgroundColor: const Color(0xfff5f5f7),
+        cardTheme: CardThemeData(
+          elevation: 4,
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        appBarTheme: const AppBarTheme(elevation: 3, centerTitle: true),
       ),
       home: const MainHomeScreen(),
     );
@@ -46,8 +56,9 @@ class MyRepairShopApp extends StatelessWidget {
 }
 
 /////////////////////
-// App State & DB //
+// App State & DB  //
 /////////////////////
+
 class AppState extends ChangeNotifier {
   final AppDatabase db;
   List<RepairJob> repairs = [];
@@ -123,6 +134,7 @@ class AppDatabase {
         pattern TEXT
       );
     ''');
+
     await db.execute('''
       CREATE TABLE sms_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -144,16 +156,20 @@ class AppDatabase {
   }
 
   Future<int> insertRepair(RepairJob r) => db.insert('repairs', r.toMap());
+
   Future<int> updateRepair(RepairJob r) =>
       db.update('repairs', r.toMap(), where: 'id = ?', whereArgs: [r.id]);
+
   Future<int> deleteRepair(int id) =>
       db.delete('repairs', where: 'id = ?', whereArgs: [id]);
+
   Future<List<RepairJob>> getRepairs() async {
     final rows = await db.query('repairs', orderBy: 'createdAt DESC');
     return rows.map((r) => RepairJob.fromMap(r)).toList();
   }
 
   Future<int> insertSmsLog(SmsLog s) => db.insert('sms_logs', s.toMap());
+
   Future<List<SmsLog>> getSmsLogs() async {
     final rows = await db.query('sms_logs', orderBy: 'sentAt DESC');
     return rows.map((r) => SmsLog.fromMap(r)).toList();
@@ -161,8 +177,9 @@ class AppDatabase {
 }
 
 /////////////////////
-// Data Models //
+// Data Models     //
 /////////////////////
+
 class RepairJob {
   int? id;
   String customerName;
@@ -260,8 +277,9 @@ class SmsLog {
 }
 
 /////////////////////
-// Utility //
+// Utility         //
 /////////////////////
+
 final telephony = Telephony.instance;
 final ImagePicker _picker = ImagePicker();
 
@@ -322,9 +340,10 @@ Future<Uint8List> generateInvoicePdf(RepairJob job) async {
   return pdf.save();
 }
 
-//////////////////////////////
-// Main Screen //
-//////////////////////////////
+/////////////////////
+// Main Shell      //
+/////////////////////
+
 class MainHomeScreen extends StatefulWidget {
   const MainHomeScreen({Key? key}) : super(key: key);
 
@@ -335,37 +354,61 @@ class MainHomeScreen extends StatefulWidget {
 class _MainHomeScreenState extends State<MainHomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const DashboardPage(),
-    const RepairTrackingPage(),
-    const SmsSenderPage(),
-    const PasswordStorePage(),
+  final List<Widget> _pages = const [
+    DashboardPage(),
+    RepairTrackingPage(),
+    SmsSenderPage(),
+    PasswordStorePage(),
+  ];
+
+  final List<String> _titles = const [
+    'Dashboard',
+    'Repairs',
+    'SMS Center',
+    'Password Vault',
   ];
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Repair Shop Manager',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          _titles[_selectedIndex],
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        elevation: 4,
+        backgroundColor: colorScheme.primaryContainer,
       ),
-      body: _pages[_selectedIndex],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        child: _pages[_selectedIndex],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>
             setState(() => _selectedIndex = index),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.dashboard),
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          NavigationDestination(icon: Icon(Icons.build), label: 'Repairs'),
-          NavigationDestination(icon: Icon(Icons.sms), label: 'SMS'),
-          NavigationDestination(icon: Icon(Icons.lock), label: 'Passwords'),
+          NavigationDestination(
+            icon: Icon(Icons.build_outlined),
+            selectedIcon: Icon(Icons.build),
+            label: 'Repairs',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.sms_outlined),
+            selectedIcon: Icon(Icons.sms),
+            label: 'SMS',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.lock_outline),
+            selectedIcon: Icon(Icons.lock),
+            label: 'Passwords',
+          ),
         ],
       ),
     );
@@ -373,8 +416,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 }
 
 //////////////////////////////
-// Dashboard Page - Beautiful Stats //
+// Dashboard Page          //
 //////////////////////////////
+
 class DashboardPage extends StatelessWidget {
   const DashboardPage({Key? key}) : super(key: key);
 
@@ -387,7 +431,6 @@ class DashboardPage extends StatelessWidget {
     final pending = repairs.where((r) => r.status != 'Completed').length;
     final completed = repairs.where((r) => r.status == 'Completed').length;
 
-    // Last 7 days stats
     Map<String, int> receivedLast7 = {};
     Map<String, int> completedLast7 = {};
     final dateFormat = DateFormat('MMM dd');
@@ -416,78 +459,45 @@ class DashboardPage extends StatelessWidget {
     }
 
     return SingleChildScrollView(
+      key: const ValueKey('dashboard'),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Overview', style: Theme.of(context).textTheme.headlineMedium),
+          const Text(
+            'Overview',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: Card(
-                  elevation: 6,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.build,
-                          size: 40,
-                          color: Colors.orange.shade700,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          '$pending',
-                          style: Theme.of(context).textTheme.headlineLarge,
-                        ),
-                        Text(
-                          'Pending Repairs',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                  ),
+                child: _StatCard(
+                  icon: Icons.build,
+                  iconColor: Colors.orange.shade700,
+                  label: 'Pending Repairs',
+                  value: pending.toString(),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Card(
-                  elevation: 6,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          size: 40,
-                          color: Colors.green.shade700,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          '$completed',
-                          style: Theme.of(context).textTheme.headlineLarge,
-                        ),
-                        Text(
-                          'Completed',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                  ),
+                child: _StatCard(
+                  icon: Icons.check_circle,
+                  iconColor: Colors.green.shade700,
+                  label: 'Completed',
+                  value: completed.toString(),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          Text(
+          const Text(
             'Last 7 Days Activity',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           ...receivedLast7.keys.map((day) {
             return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4),
               child: ListTile(
                 title: Text(
                   day,
@@ -506,9 +516,48 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+
+  const _StatCard({
+    Key? key,
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(icon, size: 40, color: iconColor),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(label, style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 //////////////////////////////
-// Repair Tracking Page - Swipe to Delete + Beautiful Cards //
+// Repair Tracking Page     //
 //////////////////////////////
+
 class RepairTrackingPage extends StatefulWidget {
   const RepairTrackingPage({Key? key}) : super(key: key);
 
@@ -517,7 +566,6 @@ class RepairTrackingPage extends StatefulWidget {
 }
 
 class _RepairTrackingPageState extends State<RepairTrackingPage> {
-  final _formKey = GlobalKey<FormState>();
   final _cname = TextEditingController();
   final _phone = TextEditingController();
   final _model = TextEditingController();
@@ -530,9 +578,9 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
   Future<void> _saveRepair(AppState st) async {
     if (_cname.text.trim().isEmpty || _phone.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Name & Phone required')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customer name & phone are required')),
+      );
       return;
     }
 
@@ -550,7 +598,6 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
     await st.addRepair(job);
 
-    // Clear form
     _cname.clear();
     _phone.clear();
     _model.clear();
@@ -563,7 +610,7 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Repair job added!')));
+    ).showSnackBar(const SnackBar(content: Text('Repair job added')));
   }
 
   @override
@@ -571,66 +618,127 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
     final st = Provider.of<AppState>(context);
 
     return Padding(
+      key: const ValueKey('repairs'),
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text(
-                    'New Repair Job',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          _buildNewRepairCard(st),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Text(
+                'All Repairs',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Text(
+                '${st.repairs.length} items',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: st.repairs.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No repair jobs yet.\nAdd a new job above.',
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: st.repairs.length,
+                    itemBuilder: (context, index) {
+                      final r = st.repairs[index];
+                      final date = DateFormat('dd MMM yyyy').format(
+                        DateTime.fromMillisecondsSinceEpoch(r.createdAt),
+                      );
+                      return _buildRepairItem(st, r, date);
+                    },
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewRepairCard(AppState st) {
+    return Card(
+      elevation: 8,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'New Repair Job',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
                     controller: _cname,
                     decoration: const InputDecoration(
-                      labelText: 'Customer Name',
+                      labelText: 'Customer Name *',
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
                     controller: _phone,
                     decoration: const InputDecoration(
-                      labelText: 'Phone',
+                      labelText: 'Phone *',
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.phone,
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
                     controller: _model,
                     decoration: const InputDecoration(
                       labelText: 'Model',
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
                     controller: _imei,
                     decoration: const InputDecoration(
                       labelText: 'IMEI',
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _problem,
-                    decoration: const InputDecoration(
-                      labelText: 'Problem',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _problem,
+              decoration: const InputDecoration(
+                labelText: 'Problem / Issue',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
                     controller: _pin,
                     decoration: const InputDecoration(
                       labelText: 'PIN (optional)',
@@ -638,8 +746,10 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                     ),
                     obscureText: true,
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
                     controller: _password,
                     decoration: const InputDecoration(
                       labelText: 'Password (optional)',
@@ -647,224 +757,184 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
                     ),
                     obscureText: true,
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _pattern,
-                    decoration: const InputDecoration(
-                      labelText: 'Pattern (describe)',
-                      border: OutlineInputBorder(),
-                    ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _pattern,
+              decoration: const InputDecoration(
+                labelText: 'Pattern (describe)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (_imagePath != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(_imagePath!),
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final path = await pickImageAndSave();
+                    if (path != null) setState(() => _imagePath = path);
+                  },
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Add Photo'),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _saveRepair(st),
+                  icon: const Icon(Icons.save),
+                  label: const Text('Save Job'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRepairItem(AppState st, RepairJob r, String date) {
+    return Dismissible(
+      key: Key(r.id.toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        decoration: BoxDecoration(
+          color: Colors.red.shade600,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: const Icon(Icons.delete, color: Colors.white, size: 30),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Delete Repair?'),
+            content: Text('Delete ${r.customerName} - ${r.model}?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (direction) {
+        st.deleteRepair(r.id!);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${r.customerName} deleted')));
+      },
+      child: Card(
+        child: ListTile(
+          contentPadding: const EdgeInsets.all(16),
+          leading: r.imagePath != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(r.imagePath!),
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
                   ),
-                  const SizedBox(height: 12),
-                  if (_imagePath != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        File(_imagePath!),
-                        height: 150,
-                        fit: BoxFit.cover,
+                )
+              : CircleAvatar(
+                  backgroundColor: Colors.deepPurple.shade100,
+                  child: const Icon(Icons.phone_android),
+                ),
+          title: Text(
+            r.customerName,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${r.model} • ${r.phone}'),
+              Text(
+                'Issue: ${r.problem}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Added: $date • Status: ${r.status}',
+                style: TextStyle(
+                  color: r.status == 'Completed'
+                      ? Colors.green.shade700
+                      : Colors.orange.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          trailing: PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'complete') {
+                r.status = 'Completed';
+                r.completedAt = DateTime.now().millisecondsSinceEpoch;
+                await st.updateRepair(r);
+              } else if (value == 'invoice') {
+                final bytes = await generateInvoicePdf(r);
+                await Printing.layoutPdf(onLayout: (_) => bytes);
+              } else if (value == 'call') {
+                launchUrl(Uri.parse('tel:${r.phone}'));
+              } else if (value == 'delete') {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete?'),
+                    content: const Text('This action cannot be undone.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
                       ),
-                    ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          final path = await pickImageAndSave();
-                          if (path != null) setState(() => _imagePath = path);
-                        },
-                        icon: const Icon(Icons.camera_alt),
-                        label: const Text('Photo'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () => _saveRepair(st),
-                        icon: const Icon(Icons.save),
-                        label: const Text('Save Job'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text(
+                          'Delete',
+                          style: TextStyle(color: Colors.red),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'All Repairs',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              itemCount: st.repairs.length,
-              itemBuilder: (context, index) {
-                final r = st.repairs[index];
-                final date = DateFormat(
-                  'dd MMM yyyy',
-                ).format(DateTime.fromMillisecondsSinceEpoch(r.createdAt));
-
-                return Dismissible(
-                  key: Key(r.id.toString()),
-                  direction: DismissDirection.endToStart,
-                  background: Container(
-                    color: Colors.red,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: const Icon(
-                      Icons.delete,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-                  confirmDismiss: (direction) async {
-                    return await showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Delete Repair?'),
-                        content: Text('Delete ${r.customerName} - ${r.model}?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text(
-                              'Delete',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  onDismissed: (direction) {
-                    st.deleteRepair(r.id!);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${r.customerName} deleted')),
-                    );
-                  },
-                  child: Card(
-                    elevation: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      leading: r.imagePath != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                File(r.imagePath!),
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : CircleAvatar(
-                              backgroundColor: Colors.deepPurple.shade100,
-                              child: const Icon(Icons.phone_android),
-                            ),
-                      title: Text(
-                        r.customerName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${r.model} • ${r.phone}'),
-                          Text(
-                            'Issue: ${r.problem}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'Added: $date • Status: ${r.status}',
-                            style: TextStyle(
-                              color: r.status == 'Completed'
-                                  ? Colors.green
-                                  : Colors.orange,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (value) async {
-                          if (value == 'complete') {
-                            r.status = 'Completed';
-                            r.completedAt =
-                                DateTime.now().millisecondsSinceEpoch;
-                            await st.updateRepair(r);
-                          } else if (value == 'invoice') {
-                            final bytes = await generateInvoicePdf(r);
-                            await Printing.layoutPdf(onLayout: (_) => bytes);
-                          } else if (value == 'call') {
-                            launchUrl(Uri.parse('tel:${r.phone}'));
-                          } else if (value == 'delete') {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Delete?'),
-                                content: const Text(
-                                  'This action cannot be undone.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text(
-                                      'Delete',
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true) {
-                              st.deleteRepair(r.id!);
-                            }
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(
-                            value: 'complete',
-                            child: Text('Mark Complete'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'invoice',
-                            child: Text('Generate Invoice'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'call',
-                            child: Text('Call Customer'),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text(
-                              'Delete',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 );
-              },
-            ),
+                if (confirm == true) {
+                  st.deleteRepair(r.id!);
+                }
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'complete', child: Text('Mark Complete')),
+              PopupMenuItem(value: 'invoice', child: Text('Generate Invoice')),
+              PopupMenuItem(value: 'call', child: Text('Call Customer')),
+              PopupMenuItem(
+                value: 'delete',
+                child: Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -884,10 +954,12 @@ class _RepairTrackingPageState extends State<RepairTrackingPage> {
 }
 
 //////////////////////////////
-// SMS & Password Pages (Minimal UI improvements) //
+// SMS Page                 //
 //////////////////////////////
+
 class SmsSenderPage extends StatefulWidget {
   const SmsSenderPage({Key? key}) : super(key: key);
+
   @override
   State<SmsSenderPage> createState() => _SmsSenderPageState();
 }
@@ -898,14 +970,52 @@ class _SmsSenderPageState extends State<SmsSenderPage> {
   bool _sending = false;
 
   Future<void> _sendSms(AppState st) async {
-    // Same as before...
-    // (Code unchanged for brevity - you can keep your previous logic)
+    if (_to.text.trim().isEmpty || _msg.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Number and message required')),
+      );
+      return;
+    }
+
+    setState(() => _sending = true);
+    try {
+      // Make sure to handle permissions in real device
+      await telephony.sendSms(to: _to.text.trim(), message: _msg.text.trim());
+
+      await st.addSmsLog(
+        SmsLog(
+          toNumber: _to.text.trim(),
+          message: _msg.text.trim(),
+          status: 'sent',
+        ),
+      );
+
+      _msg.clear();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('SMS sent')));
+    } catch (e) {
+      await st.addSmsLog(
+        SmsLog(
+          toNumber: _to.text.trim(),
+          message: _msg.text.trim(),
+          status: 'failed',
+        ),
+      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to send SMS')));
+    } finally {
+      setState(() => _sending = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final st = Provider.of<AppState>(context);
+
     return Padding(
+      key: const ValueKey('sms'),
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
@@ -914,12 +1024,24 @@ class _SmsSenderPageState extends State<SmsSenderPage> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Send SMS',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _to,
                     decoration: const InputDecoration(
                       labelText: 'Phone Number',
                       border: OutlineInputBorder(),
                     ),
+                    keyboardType: TextInputType.phone,
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -931,19 +1053,81 @@ class _SmsSenderPageState extends State<SmsSenderPage> {
                     maxLines: 5,
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _sending ? null : () => _sendSms(st),
-                    icon: const Icon(Icons.send),
-                    label: const Text('Send SMS'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _sending ? null : () => _sendSms(st),
+                      icon: _sending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.send),
+                      label: Text(_sending ? 'Sending...' : 'Send SMS'),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          // SMS History list similar to repairs with cards
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Text(
+                'SMS History',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Text(
+                '${st.smsLogs.length} messages',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: st.smsLogs.isEmpty
+                ? const Center(child: Text('No SMS history yet'))
+                : ListView.builder(
+                    itemCount: st.smsLogs.length,
+                    itemBuilder: (_, idx) {
+                      final log = st.smsLogs[idx];
+                      final dt = DateFormat(
+                        'dd MMM, HH:mm',
+                      ).format(DateTime.fromMillisecondsSinceEpoch(log.sentAt));
+                      return Card(
+                        child: ListTile(
+                          title: Text(log.toNumber),
+                          subtitle: Text(
+                            log.message,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                log.status.toUpperCase(),
+                                style: TextStyle(
+                                  color: log.status == 'sent'
+                                      ? Colors.green
+                                      : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(dt, style: const TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ],
       ),
     );
@@ -958,10 +1142,12 @@ class _SmsSenderPageState extends State<SmsSenderPage> {
 }
 
 //////////////////////////////
-// Password Store Page //
+// Password Store Page      //
 //////////////////////////////
+
 class PasswordStorePage extends StatefulWidget {
   const PasswordStorePage({Key? key}) : super(key: key);
+
   @override
   State<PasswordStorePage> createState() => _PasswordStorePageState();
 }
@@ -969,8 +1155,9 @@ class PasswordStorePage extends StatefulWidget {
 class _PasswordStorePageState extends State<PasswordStorePage> {
   final _keyCtrl = TextEditingController();
   final _valueCtrl = TextEditingController();
-  final secureStorage = FlutterSecureStorage();
+  final secureStorage = const FlutterSecureStorage();
   List<MapEntry<String, String>> entries = [];
+
   @override
   void initState() {
     super.initState();
@@ -986,63 +1173,106 @@ class _PasswordStorePageState extends State<PasswordStorePage> {
     );
   }
 
+  Future<void> _saveEntry() async {
+    if (_keyCtrl.text.trim().isEmpty || _valueCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Label & value required')));
+      return;
+    }
+    await secureStorage.write(
+      key: _keyCtrl.text.trim(),
+      value: _valueCtrl.text.trim(),
+    );
+    _keyCtrl.clear();
+    _valueCtrl.clear();
+    await _loadAll();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Password Store')),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            TextField(
-              controller: _keyCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Label (eg: Google account)',
-              ),
-            ),
-            TextField(
-              controller: _valueCtrl,
-              decoration: const InputDecoration(labelText: 'Password / PIN'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () async {
-                if (_keyCtrl.text.trim().isEmpty ||
-                    _valueCtrl.text.trim().isEmpty)
-                  return;
-                await secureStorage.write(
-                  key: _keyCtrl.text.trim(),
-                  value: _valueCtrl.text.trim(),
-                );
-                _keyCtrl.clear();
-                _valueCtrl.clear();
-                await _loadAll();
-              },
-              child: const Text('Save'),
-            ),
-            const Divider(),
-            Expanded(
-              child: ListView.builder(
-                itemCount: entries.length,
-                itemBuilder: (_, idx) {
-                  final e = entries[idx];
-                  return ListTile(
-                    title: Text(e.key),
-                    subtitle: Text(e.value),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () async {
-                        await secureStorage.delete(key: e.key);
-                        await _loadAll();
-                      },
+    return Padding(
+      key: const ValueKey('passwords'),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Save New Password',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  );
-                },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _keyCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Label (e.g. Google account)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _valueCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Password / PIN',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _saveEntry,
+                      child: const Text('Save'),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Saved Passwords',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: entries.isEmpty
+                ? const Center(child: Text('No passwords saved yet'))
+                : ListView.builder(
+                    itemCount: entries.length,
+                    itemBuilder: (_, idx) {
+                      final e = entries[idx];
+                      return Card(
+                        child: ListTile(
+                          title: Text(e.key),
+                          subtitle: Text(e.value),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () async {
+                              await secureStorage.delete(key: e.key);
+                              await _loadAll();
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
